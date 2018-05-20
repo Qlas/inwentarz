@@ -1,9 +1,11 @@
 from __future__ import unicode_literals
-from PyQt5.QtWidgets import QApplication, QWidget, QMessageBox, QDialog, QInputDialog, QMainWindow, QTableWidgetItem
+from PyQt5.QtWidgets import QApplication, QWidget, QMessageBox, QDialog, QInputDialog, QMainWindow, QTableWidgetItem, QFileDialog
 from PyQt5.QtCore import Qt
 from gui import Ui_Widget
-from gui_inv import Ui_Widget1, SelUi, Ui_Widget1_cen, Addinv, AddEd
+from gui_inv import Ui_Widget1, SelUi, Ui_Widget1_cen, Addinv, AddEd, IfExist, Impo
 from gui_add import Ui_Widget2, Addclicked
+from pdf import zy
+from excel import create, read
 import database
 
 
@@ -20,7 +22,7 @@ class MainWindow(QWidget, Ui_Widget):
         except AttributeError:
             Add_inv.kode = 0
             QMessageBox.information(self, "Uwaga",
-                                    "Program znajduje się w wersji alfa,\npewne fragmenty nie są skończone lub nie gwarantują poprawnego działania\nwszelkie uwagi lub błędy proszę zgłaszać do dostawcy oprogramowania",
+                                    "Program znajduje się w fazie beta testów,\npewne fragmenty nie są skończone lub nie gwarantują poprawnego działania\nwszelkie uwagi lub błędy proszę zgłaszać do dostawcy oprogramowania",
                                     QMessageBox.Ok)
 
         ThirdWindow.kodyk = Add_inv.kode
@@ -104,25 +106,114 @@ class SelectWindow(QWidget, SelUi):                                             
         else:
             pass
 
-class SecondWindow(QMainWindow, Ui_Widget1):                                         #inv
+
+class SecondWindow(QMainWindow, Ui_Widget1):                                         # inv
     def __init__(self):
         super(SecondWindow, self).__init__()
+        SecondWindow.tab = []
+        SecondWindow.less = 0
+        self.inside()
+        self.setupUi(self)
+        self.empty.triggered.connect(self.emptya)
+        self.all.triggered.connect(self.alla)
+        self.pdf.triggered.connect(self.ab)
+        self.Excel.triggered.connect(self.ExcelCreate)
+        self.Excelread.triggered.connect(self.ExcelRead)
 
+    def inside(self):
         self.email_blast_widget = Sec_in(parent=self)
         self.setCentralWidget(self.email_blast_widget)
+
+    def alla(self):
+        SecondWindow.less = 0
+        self.inside()
+
+    def emptya(self):
+        SecondWindow.less = 1
+        self.inside()
+    def ab(self):
+        SecondWindow.less = 0
+        self.inside()
+        zy(SecondWindow.tab)
+    def ExcelCreate(self):
+        SecondWindow.less = 0
+        self.inside()
+        create(SecondWindow.tab)
+    def ExcelRead(self):
+        options = QFileDialog.Options()
+        files, _ = QFileDialog.getOpenFileNames(self,"QFileDialog.getOpenFileNames()", "","Excel(*.xls)", options=options)
+        if files:
+            SecondWindow.x = read(files)
+            if SecondWindow.x == '0':
+                QMessageBox.warning(self, "Błąd", "Sprawdź czy importujesz poprawny plik", QMessageBox.Ok)
+            else:
+                SecondWindow.res = QMessageBox.question(self, "Import", "Zsumować powtarzające się wartości?",
+                                                QMessageBox.Yes | QMessageBox.No)
+
+                self.Imp = Imp()
+                self.Imp.exec_()
+                SecondWindow.less = 0
+                self.inside()
+
+
+class Imp(QDialog, Impo):                                         #inv
+    def __init__(self, parent=None):
+        super(Imp, self).__init__(parent)
         self.setupUi(self)
-        self.empty.triggered.connect(self.clos)
+        self.daba()
 
+        self.addallBtn.clicked.connect(self.AddAll)
+        self.addselBtn.clicked.connect(self.AddSel)
 
+    def AddSel(self):
+        q = set(index.row() for index in self.tableWidget.selectedIndexes())
+        q = list(q)
+        try:
+            self.z = []
+            for i in range(len(q)):
+                self.z.append(['', '', '', '', '', ''])
+                self.z[i][0] = self.tableWidget.item(q[i], 0).text()
+                self.z[i][1] = self.tableWidget.item(q[i], 1).text()
+                self.z[i][2] = self.tableWidget.item(q[i], 2).text()
+                self.z[i][3] = self.tableWidget.item(q[i], 3).text()
+                self.z[i][4] = self.tableWidget.item(q[i], 4).text()
+                self.z[i][5] = self.tableWidget.item(q[i], 5).text()
 
-    def clos(self):
-        odp = QMessageBox.question(
-            self, 'Komunikat',
-            "Czy na pewno koniec?",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if odp == QMessageBox.Yes:
+        except AttributeError:
+            QMessageBox.warning(self, "Błąd", "Element nie może być pusty", QMessageBox.Ok)
+        if SecondWindow.res == QMessageBox.No:
+            database.addimport(SecondWindow.db, self.z)
             self.close()
-            MW.show()
+        else:
+            database.addimportsame(SecondWindow.db, self.z)
+            self.close()
+    def AddAll(self):
+        if SecondWindow.res == QMessageBox.No:
+            database.addimport(SecondWindow.db, SecondWindow.x)
+            self.close()
+        else:
+            database.addimportsame(SecondWindow.db, SecondWindow.x)
+            self.close()
+
+    def daba(self):
+        db = SecondWindow.x
+        self.tableWidget.setRowCount(0)
+        for row_number, row_data in enumerate(db):
+            self.tableWidget.insertRow(row_number)
+            q = []
+            for i in range (0,6):
+                q.append(row_data[i])
+            row_data=q
+            for column_number, data in enumerate(row_data):
+                self.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+        model = self.tableWidget.model()
+        data = []
+        for row in range(model.rowCount()):
+            data.append([])
+            for column in range(model.columnCount()):
+                index = model.index(row, column)
+                data[row].append(str(model.data(index)))
 
 class Sec_in(QWidget, Ui_Widget1_cen):                                         #inv
     def __init__(self, parent=None):
@@ -131,14 +222,34 @@ class Sec_in(QWidget, Ui_Widget1_cen):                                         #
         self.daba()
         self.addBtn.clicked.connect(self.addy)
         self.editBtn.clicked.connect(self.eddy)
+        self.delBtn.clicked.connect(self.delly)
     def daba(self):
-        db = database.gettable(SecondWindow.db)
+        if SecondWindow.less == 0:
+            db = database.gettable(SecondWindow.db)
+        else:
+            db = database.gettablea(SecondWindow.db)
         self.tableWidget.setRowCount(0);
         self.tableWidget.setRowCount(1)
+        HowMuch = 1
         for row_number, row_data in enumerate(db):
             self.tableWidget.insertRow(row_number)
+            q = []
+            for i in range (0,5):
+                q.append(row_data[i])
+            q.insert(0, HowMuch)
+            row_data=q
+            HowMuch += 1
             for column_number, data in enumerate(row_data):
                 self.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+        model = self.tableWidget.model()
+        data = []
+        for row in range(model.rowCount()):
+            data.append([])
+            for column in range(model.columnCount()):
+                index = model.index(row, column)
+                data[row].append(str(model.data(index)))
+        SecondWindow.tab = data
     def addy(self):
         self.AI = Add_inv()
         self.AI.exec_()
@@ -152,18 +263,44 @@ class Sec_in(QWidget, Ui_Widget1_cen):                                         #
         if len(Sec_in.z) != 1:
             QMessageBox.warning(self, "Błąd", "Musisz wybrać jeden element do edycji", QMessageBox.Ok)
         else:
-            Sec_in.z = Sec_in.z.pop() + 1
-            self.ED = Eddy()
-            self.ED.exec_()
-            self.daba()
+            try:
+                self.z = []
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 1).text())
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 3).text())
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 4).text())
+                Sec_in.z = self.z
+                self.ED = Eddy()
+                self.ED.exec_()
+                self.daba()
+            except AttributeError:
+                QMessageBox.warning(self, "Błąd", "Element nie może być pusty", QMessageBox.Ok)
 
 
+    def delly(self):
+        Sec_in.q = set(index.row() for index in self.tableWidget.selectedIndexes())
+        if len(Sec_in.q) != 1:
+            QMessageBox.warning(self, "Błąd", "Musisz wybrać jeden element do edycji", QMessageBox.Ok)
+        else:
+            try:
+                self.z = []
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 1).text())
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 3).text())
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 4).text())
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 2).text())
+                Sec_in.q = Sec_in.q.pop() + 1
+                self.res = QMessageBox.question(self, "Usuń", "Usunąc zazaczony element?", QMessageBox.Yes | QMessageBox.No)
+                if self.res == QMessageBox.Yes:
+                    database.dele(SecondWindow.db, self.z)
+                    self.daba()
+            except AttributeError:
+                QMessageBox.warning(self, "Błąd", "Element nie może być pusty", QMessageBox.Ok)
 
-class Eddy(QDialog, AddEd):                                         #dodaj  1
+
+class Eddy(QDialog, AddEd):                                         # dodaj  1
     def __init__(self, parent=None):
         super(Eddy, self).__init__(parent)
         self.setupUi(self)
-        self.y = database.geted(str(SecondWindow.db), str(Sec_in.z))
+        self.y = database.geted(str(SecondWindow.db), Sec_in.z)
         self.name.setText(self.y[1])
         self.JM.setText(self.y[2])
         self.am.setText(self.y[3])
@@ -210,7 +347,6 @@ class Eddy(QDialog, AddEd):                                         #dodaj  1
             QMessageBox.information(self, "Informacja", "Nie zmieniono żadnej wartości", QMessageBox.Ok)
 
 
-
 class Add_inv(QDialog, Addinv):
     def __init__(self):
         super(Add_inv, self).__init__()
@@ -252,7 +388,6 @@ class Add_inv(QDialog, Addinv):
             QMessageBox.warning(self, "Błąd", "Błędny kod", QMessageBox.Ok)
             self.code.setText('')
 
-
     def addy(self):
         if self.prize.text() == '':
             self.prize.setText('0')
@@ -262,39 +397,34 @@ class Add_inv(QDialog, Addinv):
             self.prize.setText(x)
         try:
             int(self.am.text())
-            float(self.prize.text())
+            z = float(self.prize.text())
+            self.prize.setText(str(z))
             if self.name.text() == '' or self.JM.text() == '' or self.am.text() == '':
                 QMessageBox.warning(self, "Błąd", "Nazwa, JM i ilość musi być podane", QMessageBox.Ok)
             else:
-                if self.prize.text() == '0':
-                    QMessageBox.information(self, "Uwaga", "nie podano ceny", QMessageBox.Ok)
                 x, xx = database.addtoinv(SecondWindow.db, self.name.text(), self.JM.text(), self.am.text(), self.prize.text())
                 if x == 'a':
-                    res = QMessageBox.question(self, "Już istnieje", "Taka nazwa już istnieje w bazie, dodać ilość do niej?",  QMessageBox.Yes | QMessageBox.No)
-                    if res == QMessageBox.Yes:
-                        xxx = xx[0]
-                        if xxx[4] != self.prize.text():
-                            res2 = QMessageBox.question(self, "Cena się nie zgadza",
-                                                       "Cena produktów jest inna, wpisać nową ("+ self.prize.text() +") zamiast starej ("+ xxx[4] +") ? \n (Yes - zamiana na nową, No - dodaje produkt ze starą cenę, Cancel - anuluje)",
-                                                       QMessageBox.Yes | QMessageBox.No |QMessageBox.Cancel)
-                            change = 2
-                            if res2 == QMessageBox.Yes:
-                                change = 1
-                            elif res2 == QMessageBox.No:
-                                change = 0
-                            if change == 1 or change == 0:
-                                if change == 1:
-                                    zzz = (xxx[0],xxx[1],xxx[2],xxx[3],self.prize.text(),xxx[5])
-                                    xxx = zzz
-                                u, uu = database.addtoinvpr(SecondWindow.db, xxx, self.am.text())
-                                QMessageBox.information(self, "Uwaga",
-                                                        "Zaktualizowano: " + self.name.text() + "\nW ilości: " + str(
-                                                            u) + "\nW cenie: " + xxx[4] + "\nO wartości: " + str(
-                                                            uu), QMessageBox.Ok)
+                    Add_inv.dates = xx
+                    Add_inv.which = 0
+                    Add_inv.edy = 0
+                    self.AE = AddIfExist()
+                    self.AE.exec_()
+                    if Add_inv.which == 1:
+                        database.addanother(SecondWindow.db, self.name.text(), self.JM.text(), self.am.text(),
+                                            self.prize.text())
+                        QMessageBox.information(self, "Uwaga",
+                                                "Dodano: " + self.name.text() + "\nW ilości: " + self.am.text() + "\nW cenie: " + self.prize.text() + "\nO wartości: " + str(
+                                                    round(int(self.am.text()) * float(self.prize.text()), 2)),
+                                                QMessageBox.Ok)
+                    if Add_inv.which == 2:
+                        z = int(self.am.text()) + int(Add_inv.edy[2])
+                        Add_inv.edy[2] = str(z)
+                        x = float(Add_inv.edy[2]) * float(Add_inv.edy[3])
+                        Add_inv.edy[4] = str(x)
+                        database.addtoinvis(SecondWindow.db, Add_inv.edy)
+                        QMessageBox.information(self, "Uwaga", "Zaktualizowano: " + self.name.text() + "\nW ilości: " + Add_inv.edy[2] + "\nO cenie: " + Add_inv.edy[3] + "\nO wartości: " + Add_inv.edy[4], QMessageBox.Ok)
 
-                        else:
-                            u,uu = database.addtoinvis(SecondWindow.db, xxx, self.am.text())
-                            QMessageBox.information(self, "Uwaga", "Zaktualizowano: " + self.name.text() + "\nW ilości: " + str(u) + "\nW cenie: " + self.prize.text() + "\nO wartości: " + str(uu), QMessageBox.Ok)
+
                 else:
                     QMessageBox.information(self, "Uwaga", "Dodano: " + self.name.text() + "\nW ilości: " + self.am.text() + "\nW cenie: " + self.prize.text() + "\nO wartości: " + str(round(int(self.am.text()) * float(self.prize.text()),2)), QMessageBox.Ok)
                 self.code.setText('')
@@ -311,6 +441,59 @@ class Add_inv(QDialog, Addinv):
 
 
 
+class AddIfExist(QDialog, IfExist):                                                     #dodaj 2
+    def __init__(self):
+        super(AddIfExist, self).__init__()
+        self.setupUi(self)
+        self.Labname.setText(self.Labname.text() + str(Add_inv.dates[0][1]))
+        self.Labjm.setText(self.Labjm.text() + str(Add_inv.dates[0][2]))
+        self.daba()
+        self.addnewBtn.clicked.connect(self.AddNew)
+        self.addtoBtn.clicked.connect(self.AddTo)
+
+    def AddTo(self):
+        q = set(index.row() for index in self.tableWidget.selectedIndexes())
+        if len(q) != 1:
+            QMessageBox.warning(self, "Błąd", "Musisz wybrać jeden element do edycji", QMessageBox.Ok)
+        else:
+            try:
+                self.z = []
+                self.z.append(str(Add_inv.dates[0][1]))
+                self.z.append(str(Add_inv.dates[0][2]))
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 0).text())
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 1).text())
+                self.z.append(self.tableWidget.item(self.tableWidget.currentRow(), 2).text())
+                Add_inv.edy = self.z
+                Add_inv.which = 2
+                self.close()
+            except AttributeError:
+                QMessageBox.warning(self, "Błąd", "Element nie może być pusty", QMessageBox.Ok)
+
+    def AddNew(self):
+        Add_inv.which = 1
+        self.close()
+
+
+    def daba(self):
+        print(Add_inv.dates)
+        db = Add_inv.dates
+        self.tableWidget.setRowCount(0)
+        for row_number, row_data in enumerate(db):
+            self.tableWidget.insertRow(row_number)
+            q = []
+            for i in range (3,6):
+                q.append(row_data[i])
+            row_data=q
+            for column_number, data in enumerate(row_data):
+                self.tableWidget.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+        model = self.tableWidget.model()
+        data = []
+        for row in range(model.rowCount()):
+            data.append([])
+            for column in range(model.columnCount()):
+                index = model.index(row, column)
+                data[row].append(str(model.data(index)))
 
 class ThirdWindow(QWidget, Ui_Widget2):                                         #dodaj  1
     def __init__(self, parent=None):
@@ -360,6 +543,7 @@ class ThirdWindow(QWidget, Ui_Widget2):                                         
 
         except ValueError:
             QMessageBox.warning(self, "Błąd", "Błędne dane", QMessageBox.Ok)
+
 
 
 class add1(QDialog, Addclicked):                                                     #dodaj 2
