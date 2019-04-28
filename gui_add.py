@@ -4,12 +4,10 @@ class Ui_Widget2(object):
 
     def setupUi(self, Widget):
 
-
         self.et1 = QLabel("Kod:", self)
         self.code = QLineEdit()
         self.addBtn = QPushButton("Dodaj", self)
         self.clsBtn = QPushButton("Zamknij", self)
-
 
         layoutH = QHBoxLayout()
         layoutH.addWidget(self.et1)
@@ -23,7 +21,6 @@ class Ui_Widget2(object):
         self.setLayout(layout)
 
         self.code.setFocus()
-
 
         self.setWindowTitle("Inwentarz")
         self.setFixedSize(400, 100)

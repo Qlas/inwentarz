@@ -13,7 +13,7 @@ class MainWindow(QWidget, Ui_Widget):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
-        self.clsBtn.clicked.connect(self.clos)
+        self.clsBtn.clicked.connect(self.close_app)
         self.invBtn.clicked.connect(self.invclicked)
         self.addBtn.clicked.connect(self.addclicked)
 
@@ -21,9 +21,9 @@ class MainWindow(QWidget, Ui_Widget):
             Add_inv.kode
         except AttributeError:
             Add_inv.kode = 0
-            QMessageBox.information(self, "Uwaga",
-                                    "Program znajduje się w fazie beta testów,\npewne fragmenty nie są skończone lub nie gwarantują poprawnego działania\nwszelkie uwagi lub błędy proszę zgłaszać do dostawcy oprogramowania",
-                                    QMessageBox.Ok)
+            # QMessageBox.information(self, "Uwaga",
+            #                         "Program znajduje się w fazie beta testów,\npewne fragmenty nie są skończone lub nie gwarantują poprawnego działania\nwszelkie uwagi lub błędy proszę zgłaszać do dostawcy oprogramowania",
+            #                         QMessageBox.Ok)
 
         ThirdWindow.kodyk = Add_inv.kode
 
@@ -37,7 +37,7 @@ class MainWindow(QWidget, Ui_Widget):
         self.TW = ThirdWindow()
         self.TW.show()
 
-    def clos(self):
+    def close_app(self):
         odp = QMessageBox.question(
             self, 'Komunikat',
             "Czy na pewno koniec?",
@@ -46,11 +46,12 @@ class MainWindow(QWidget, Ui_Widget):
         if odp == QMessageBox.Yes:
             self.close()
 
+
 class SelectWindow(QWidget, SelUi):                                                #wybor bazy do rem
     def __init__(self):
         super(SelectWindow, self).__init__()
         self.setupUi(self)
-        self.clsBtn.clicked.connect(self.clos)
+        self.clsBtn.clicked.connect(self.close_app)
         self.addBtn.clicked.connect(self.add)
         self.thisBtn.clicked.connect(self.thisa)
         database.adda()
@@ -94,7 +95,7 @@ class SelectWindow(QWidget, SelUi):                                             
                 self.add()
 
 
-    def clos(self):
+    def close_app(self):
         odp = QMessageBox.question(
             self, 'Komunikat',
             "Czy na pewno koniec?",
@@ -215,6 +216,7 @@ class Imp(QDialog, Impo):                                         #inv
                 index = model.index(row, column)
                 data[row].append(str(model.data(index)))
 
+
 class Sec_in(QWidget, Ui_Widget1_cen):                                         #inv
     def __init__(self, parent=None):
         super(Sec_in, self).__init__(parent)
@@ -228,7 +230,7 @@ class Sec_in(QWidget, Ui_Widget1_cen):                                         #
             db = database.gettable(SecondWindow.db)
         else:
             db = database.gettablea(SecondWindow.db)
-        self.tableWidget.setRowCount(0);
+        self.tableWidget.setRowCount(0)
         self.tableWidget.setRowCount(1)
         HowMuch = 1
         for row_number, row_data in enumerate(db):
@@ -440,7 +442,6 @@ class Add_inv(QDialog, Addinv):
             QMessageBox.warning(self, "Błąd", "Ilość i cena muszą być liczbami", QMessageBox.Ok)
 
 
-
 class AddIfExist(QDialog, IfExist):                                                     #dodaj 2
     def __init__(self):
         super(AddIfExist, self).__init__()
@@ -495,6 +496,7 @@ class AddIfExist(QDialog, IfExist):                                             
                 index = model.index(row, column)
                 data[row].append(str(model.data(index)))
 
+
 class ThirdWindow(QWidget, Ui_Widget2):                                         #dodaj  1
     def __init__(self, parent=None):
         super(ThirdWindow, self).__init__(parent)
@@ -543,7 +545,6 @@ class ThirdWindow(QWidget, Ui_Widget2):                                         
 
         except ValueError:
             QMessageBox.warning(self, "Błąd", "Błędne dane", QMessageBox.Ok)
-
 
 
 class add1(QDialog, Addclicked):                                                     #dodaj 2
@@ -607,9 +608,6 @@ class add1(QDialog, Addclicked):                                                
                                 'Dodano', 'Dodano produkt: ' + self.curr + "\nO kodzie: " + self.codeLE.text() + "\n Jednostka miary: " + self.meas,
                                 QMessageBox.Ok)
         self.close()
-
-
-
 
 
 if __name__ == '__main__':

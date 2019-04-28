@@ -22,9 +22,6 @@ def zy(tab):
 
 		# ----------------------------------------------------------------------
 		def run(self):
-			"""
-            Run the report
-            """
 			now = datetime.now()
 			z = now.strftime("%Y-%m-%d")
 			self.doc = SimpleDocTemplate("Inwentaryzacja " + z +".pdf")
@@ -35,20 +32,12 @@ def zy(tab):
 
 		# ----------------------------------------------------------------------
 		def createDocument(self, canvas, doc):
-			"""
-            Create the document
-            """
 			self.c = canvas
 			width, height = A4
-			# dodanie czcionek
 			pdfmetrics.registerFont(TTFont('Arial-Bold', 'arialbd.ttf'))
 			pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
 			#pdfmetrics.registerFont(TTFont('Dejavu-Italic', 'DejaVuSerif-Italic.ttf'))
-
-			# umieszczanie grafiki
 			minus = 40
-
-			# prosty tekst
 			self.c.setFont("Arial", 10)
 			z = "Inwentaryzacja otwarta dnia .................."
 			text_width = stringWidth(z, "Arial", 10)
@@ -77,9 +66,6 @@ def zy(tab):
 		# ----------------------------------------------------------------------
 
 		def createLineItems(self):
-			"""
-            Create the line items
-            """
 			text_data = ["Lp.", "Nazwa", "JM",
 						 "Ilość", "Cena zł", "Wartość zł",
 						 "Uwagi"]
